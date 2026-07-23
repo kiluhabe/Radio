@@ -1,2 +1,4 @@
 firmware/radio-rp/build/
 .DS_Store
+target/
+*.uf2

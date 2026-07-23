@@ -1,0 +1,31 @@
+[package]
+name = "firmware-rp2040"
+version = "0.1.0"
+edition = "2021"
+
+# Standalone workspace: firmware/rp2040 sits inside the parent workspace's
+# directory tree but must not join it (its .cargo/config.toml sets an
+# embedded target, which would break `radio-core`'s host builds). An empty
+# [workspace] table here tells cargo this crate roots its own workspace.
+[workspace]
+
+[dependencies]
+radio-core = { path = "../../radio-core" }
+rp-pico = "0.9"
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+embedded-hal = "1.0"
+defmt = "1.0"
+defmt-rtt = "1.0"
+panic-probe = { version = "1.0", features = ["print-defmt"] }
+
+[[bin]]
+name = "firmware-rp2040"
+path = "src/main.rs"
+test = false
+bench = false
+
+[profile.release]
+debug = true
+lto = true
+opt-level = "s"
