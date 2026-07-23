@@ -14,6 +14,8 @@ use defmt_rtt as _;
 use embedded_hal::digital::OutputPin;
 use panic_probe as _;
 
+mod adapters;
+
 #[entry]
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
