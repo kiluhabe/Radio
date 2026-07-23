@@ -5,3 +5,6 @@ pub use types::*;
 
 pub mod quadrature;
 pub use quadrature::QuadratureDecoder;
+
+pub mod button;
+pub use button::ButtonDebouncer;
