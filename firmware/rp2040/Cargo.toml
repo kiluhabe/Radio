@@ -15,6 +15,12 @@ rp-pico = "0.9"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 embedded-hal = "1.0"
+# rda5807m 0.1.0 is written against the pre-1.0 embedded-hal blocking I2C
+# traits (Write/Read/WriteRead), not the embedded-hal 1.0 `I2c` trait used
+# elsewhere in this crate. rp2040-hal already implements both generations
+# for its I2C peripheral, so both dependencies coexist without conflict.
+embedded-hal-02 = { package = "embedded-hal", version = "0.2.7" }
+rda5807m = "0.1"
 defmt = "0.3"
 defmt-rtt = "0.4"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
