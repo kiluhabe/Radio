@@ -35,6 +35,16 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 # and the graph carries only one rp2040-hal version. Confined to
 # src/adapters/storage.rs only.
 rp2040-flash = "0.5"
+# Shares the single I2C0 peripheral between the tuner and display adapters
+# in main.rs's composition root (see `RefCellDevice` there). Its `atomic`
+# module (unused here -- we only use `RefCellDevice`, not `AtomicDevice`)
+# still gets compiled and pulls in `portable-atomic`'s CAS-based fallback,
+# which needs an explicit opt-in on thumbv6m (Cortex-M0+ has no atomic CAS
+# instruction). `unsafe-assume-single-core` is sound here for the same
+# reason it's sound in storage.rs's flash access: this firmware never
+# starts core 1.
+embedded-hal-bus = "0.2"
+portable-atomic = { version = "1", features = ["unsafe-assume-single-core"] }
 
 [[bin]]
 name = "firmware-rp2040"
