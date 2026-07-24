@@ -212,6 +212,7 @@ fn main() -> ! {
                 ButtonEvent::Short => {
                     // Mirrors cycleMode() + drawScreen().
                     radio.cycle_mode();
+                    tuner.set_frequency(radio.settings.freq);
                     redraw(&radio, &mut tuner, &mut display);
                 }
                 ButtonEvent::Double => {
