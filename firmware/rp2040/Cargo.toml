@@ -27,6 +27,14 @@ heapless = "0.8"
 defmt = "0.3"
 defmt-rtt = "0.4"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
+# Pinned to 0.5 (not the newer 0.6) deliberately: 0.6 depends on
+# rp2040-hal 0.11, while rp-pico 0.9 depends on rp2040-hal 0.10.2. With
+# both in the dependency graph, fat LTO (see [profile.release] below)
+# fails to link with "symbol multiply defined" for compiler-builtins
+# globals. 0.5 depends on rp2040-hal ^0.10, so it unifies with rp-pico's
+# and the graph carries only one rp2040-hal version. Confined to
+# src/adapters/storage.rs only.
+rp2040-flash = "0.5"
 
 [[bin]]
 name = "firmware-rp2040"
