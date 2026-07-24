@@ -13,7 +13,9 @@
 //!
 //! The brief's sketch was written against `rp2040-flash` "0.5" and flagged
 //! that the real API might differ. Checked against the actual crate source
-//! for 0.6.0 (the version that resolves today) on docs.rs / crates.io:
+//! for 0.5.2 (the version `Cargo.toml`/`Cargo.lock` pin -- see the
+//! `Cargo.toml` comment for why -- API-identical to 0.6.0) on docs.rs /
+//! crates.io:
 //!
 //! - **No `flash_read` function exists.** RP2040 flash is memory-mapped
 //!   (XIP) during normal execution -- reading it is just a pointer
@@ -42,7 +44,7 @@
 //! wrapping the call in `cortex_m::interrupt::free` satisfies all of the
 //! crate's documented preconditions.
 
-use radio_core::{Settings, MAX_FAVS};
+use radio_core::{Settings, FREQ_MAX, FREQ_MIN, MAX_FAVS};
 
 const MAGIC: u32 = 0xAB20_4001;
 
@@ -94,6 +96,25 @@ impl radio_core::Storage for FlashStorage {
         }
         if stored.fav_count as usize > MAX_FAVS {
             return None;
+        }
+        // Matches loadSettings()'s `if (s.freq >= FREQ_MIN && s.freq <=
+        // FREQ_MAX) currentFreq = s.freq;`: an out-of-range stored
+        // frequency is rejected. Unlike Arduino (which just keeps
+        // currentFreq at its prior value and continues loading favs), the
+        // simplest faithful equivalent here is to reject the whole load and
+        // let the caller fall back to `Settings::default()`.
+        if stored.freq < FREQ_MIN || stored.freq > FREQ_MAX {
+            return None;
+        }
+        // Matches loadSettings()'s favorites-validation loop: it `return`s
+        // out of the whole function on the first out-of-range favorite,
+        // discarding the entire settings blob rather than just that one
+        // favorite. Validate all favorites up front before building
+        // `settings` so a single bad entry rejects everything.
+        for i in 0..stored.fav_count as usize {
+            if stored.favs[i] < FREQ_MIN || stored.favs[i] > FREQ_MAX {
+                return None;
+            }
         }
 
         let mut settings = Settings {

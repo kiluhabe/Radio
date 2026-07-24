@@ -257,7 +257,10 @@ fn main() -> ! {
             }
         }
 
-        if radio.should_save(now, SAVE_DELAY_MS) {
+        // Mirrors loop()'s `if (!powerOn) return;` guard before the autosave
+        // check: autosave never runs while powered off (radioPowerOff()
+        // above already force-saves and clears dirty on the way down).
+        if power_on && radio.should_save(now, SAVE_DELAY_MS) {
             storage.save(&radio.settings);
             radio.clear_dirty();
         }

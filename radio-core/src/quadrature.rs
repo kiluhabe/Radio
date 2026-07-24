@@ -1,3 +1,5 @@
+// Positive values indicate clockwise rotation. If the encoder reads
+// backwards on real hardware, flip the sign of every entry in this table.
 const TRANSITION_TABLE: [i8; 16] = [
      0,  1, -1,  0,
     -1,  0,  0,  1,

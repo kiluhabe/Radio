@@ -1,5 +1,5 @@
 use crate::ports::Screen;
-use crate::types::{Mode, Settings, FREQ_MAX, FREQ_MIN, FREQ_STEP, MAX_FAVS};
+use crate::types::{Mode, Settings, FREQ_MAX, FREQ_MIN, FREQ_STEP};
 
 pub struct RadioState {
     pub mode: Mode,
@@ -139,6 +139,7 @@ impl RadioState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::MAX_FAVS;
 
     #[test]
     fn cycle_mode_toggles_between_tune_and_fav() {
