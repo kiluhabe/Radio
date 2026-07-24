@@ -82,9 +82,12 @@ impl radio_core::Storage for FlashStorage {
             *b = unsafe { core::ptr::read_volatile(src.add(i)) };
         }
         // SAFETY: `buf` holds exactly size_of::<StoredSettings>() bytes
-        // freshly read from flash above.
+        // freshly read from flash above. `read_unaligned` is used because
+        // `buf` (a `[u8; N]`) only guarantees alignment 1, not the
+        // alignment 4 that `StoredSettings` (starting with a `u32`)
+        // requires for a plain `read`.
         let stored: StoredSettings =
-            unsafe { core::ptr::read(buf.as_ptr() as *const StoredSettings) };
+            unsafe { core::ptr::read_unaligned(buf.as_ptr() as *const StoredSettings) };
 
         if stored.magic != MAGIC {
             return None;
