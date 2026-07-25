@@ -296,14 +296,12 @@ dependencies = [
  "defmt 0.3.100",
  "defmt-rtt",
  "embedded-graphics",
- "embedded-hal 0.2.7",
  "embedded-hal 1.0.0",
  "embedded-hal-bus",
  "heapless",
  "panic-probe",
  "portable-atomic",
  "radio-core",
- "rda5807m",
  "rp-pico",
  "rp2040-flash",
  "ssd1306",
@@ -584,15 +582,6 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-
-[[package]]
-name = "rda5807m"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2ec030702c876c7d6197b1910da0e7ffd13145739bd81157cdfb01e8475b725"
-dependencies = [
- "embedded-hal 0.2.7",
-]
 
 [[package]]
 name = "rp-pico"

@@ -33,47 +33,6 @@ const SAVE_DELAY_MS: u32 = 2000;
 /// attenuator is pinned once at init, volume is a physical pot downstream.
 const FIXED_VOL: u8 = 15;
 
-/// `embedded-hal-bus`'s `RefCellDevice` (used below for the display) only
-/// implements the embedded-hal 1.0 `I2c` trait. `Rda5807Tuner` is built
-/// against rda5807m 0.1.0, which predates embedded-hal 1.0 and needs the
-/// legacy `embedded_hal_02::blocking::i2c::{Read, Write, WriteRead}` traits
-/// instead (see the `embedded-hal-02` comment in Cargo.toml). `embedded-hal-
-/// bus` 0.2 has no equivalent wrapper for those legacy traits, so this small
-/// shim borrows the same shared `RefCell<I2C>` and forwards to the
-/// underlying rp2040-hal `I2C` peripheral's own legacy-trait implementation
-/// (rp2040-hal implements both trait generations directly on the same type).
-struct LegacyI2cDevice<'a, T>(&'a RefCell<T>);
-
-impl<'a, T, E> embedded_hal_02::blocking::i2c::Write for LegacyI2cDevice<'a, T>
-where
-    T: embedded_hal_02::blocking::i2c::Write<Error = E>,
-{
-    type Error = E;
-    fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), E> {
-        self.0.borrow_mut().write(addr, bytes)
-    }
-}
-
-impl<'a, T, E> embedded_hal_02::blocking::i2c::Read for LegacyI2cDevice<'a, T>
-where
-    T: embedded_hal_02::blocking::i2c::Read<Error = E>,
-{
-    type Error = E;
-    fn read(&mut self, addr: u8, buffer: &mut [u8]) -> Result<(), E> {
-        self.0.borrow_mut().read(addr, buffer)
-    }
-}
-
-impl<'a, T, E> embedded_hal_02::blocking::i2c::WriteRead for LegacyI2cDevice<'a, T>
-where
-    T: embedded_hal_02::blocking::i2c::WriteRead<Error = E>,
-{
-    type Error = E;
-    fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), E> {
-        self.0.borrow_mut().write_read(addr, bytes, buffer)
-    }
-}
-
 /// Busy-wait millisecond delay built on `radio_core::Clock`, matching
 /// `radio-rp.ino`'s `delay(50);` between `rx.setFrequency()` and
 /// `rx.setVolume()` in `radioPowerOn()`. No SysTick delay peripheral is
@@ -134,11 +93,9 @@ fn main() -> ! {
 
     // OLED and tuner share one I2C0 bus; both need mutable access to the
     // same peripheral instance, so it lives behind a RefCell and each
-    // adapter gets its own borrowing handle (embedded-hal-bus's
-    // RefCellDevice for the display's embedded-hal 1.0 `I2c` needs, the
-    // local LegacyI2cDevice shim above for the tuner's legacy needs).
+    // adapter gets its own embedded-hal-bus RefCellDevice handle onto it.
     let i2c_cell = RefCell::new(i2c);
-    let tuner_i2c = LegacyI2cDevice(&i2c_cell);
+    let tuner_i2c = embedded_hal_bus::i2c::RefCellDevice::new(&i2c_cell);
     let display_i2c = embedded_hal_bus::i2c::RefCellDevice::new(&i2c_cell);
 
     let mut tuner = adapters::tuner::Rda5807Tuner::new(tuner_i2c);
