@@ -2,7 +2,10 @@
 target = "thumbv6m-none-eabi"
 
 [target.thumbv6m-none-eabi]
-runner = "probe-rs run --chip RP2040"
+# The RP2040-Zero breaks out no SWD pads, so probe-rs cannot attach. Flashing
+# goes through the bootloader instead: hold BOOT while plugging in the USB-C
+# cable (the RPI-RP2 volume appears), then `cargo run --release`.
+runner = "elf2uf2-rs -d"
 rustflags = [
     "-C", "link-arg=--nmagic",
     "-C", "link-arg=-Tlink.x",

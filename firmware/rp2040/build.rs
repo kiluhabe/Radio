@@ -14,7 +14,8 @@ fn main() {
     // --nmagic and -Tlink.x are already set via [target.thumbv6m-none-eabi]
     // rustflags in .cargo/config.toml; repeating them here made the linker
     // process `INCLUDE memory.x` twice, which fails with "region 'BOOT2'
-    // already defined". Only -Tdefmt.x (not present in config.toml) belongs
-    // here.
-    println!("cargo:rustc-link-arg=-Tdefmt.x");
+    // already defined".
+    //
+    // -Tdefmt.x used to be emitted here. It is gone along with defmt itself:
+    // the RP2040-Zero exposes no SWD pads, so there is no probe to carry RTT.
 }

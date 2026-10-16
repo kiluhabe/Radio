@@ -12,7 +12,8 @@ impl<P: InputPin> GpioButton<P> {
 
 impl<P: InputPin> radio_core::ButtonInput for GpioButton<P> {
     fn is_pressed(&mut self) -> bool {
-        // GP6はINPUT_PULLUPでNO接点。押下時にLOWになるためis_low()==trueが「押されている」
+        // 内部プルアップ＋NO接点なので、閉じている間だけLOW。
+        // 押しボタン（アクションボタン）でも、位置で開閉する電源スイッチでも同じ。
         self.pin.is_low().unwrap_or(false)
     }
 }

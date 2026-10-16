@@ -1,4 +1,4 @@
-use rp_pico::hal::Timer;
+use waveshare_rp2040_zero::hal::Timer;
 
 pub struct HalClock {
     timer: Timer,

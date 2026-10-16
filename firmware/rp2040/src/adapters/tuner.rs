@@ -67,9 +67,8 @@ const RSSI_SHIFT: u8 = 9;
 /// status register, is unaffected) while the demodulated station never
 /// changed (REG03's CHAN bits were corrupted on every write). Confirmed to
 /// be a firmware-side regression, not a hardware fault: the same physical
-/// board tuned correctly under the prior Arduino firmware
-/// (`firmware/radio-rp/radio-rp.ino`, via the PU2CLR RDA5807 library),
-/// which -- for exactly its tuning/config registers -- never reads
+/// board tuned correctly under the prior Arduino firmware (via the PU2CLR
+/// RDA5807 library), which -- for exactly its tuning/config registers -- never reads
 /// REG02/REG03/REG05 back either; it keeps its own in-RAM shadow of each
 /// register and writes the whole thing on every change. This driver
 /// follows that same proven pattern directly: every register write here is

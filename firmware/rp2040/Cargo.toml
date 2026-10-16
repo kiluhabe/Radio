@@ -11,24 +11,35 @@ edition = "2021"
 
 [dependencies]
 radio-core = { path = "../../radio-core" }
-rp-pico = "0.9"
+# Board is a Waveshare RP2040-Zero, not a Pico: its 23-pin edge exposes
+# GPIO0-15 / GPIO26-29 / 3V3 / GND / VSYS, GPIO16 is hard-wired to the
+# on-board WS2812B, and SWD is not broken out at all (see docs/parts-rp.md).
+# The BSP only differs from rp-pico in pin naming and board metadata -- the
+# 12MHz crystal and 2MB flash are the same, so memory.x is unchanged.
+waveshare-rp2040-zero = "0.8"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 embedded-hal = "1.0"
 ssd1306 = "0.9"
 embedded-graphics = "0.8"
 heapless = "0.8"
-defmt = "0.3"
-defmt-rtt = "0.4"
-panic-probe = { version = "0.3", features = ["print-defmt"] }
+# RP2040-Zero exposes no SWD pads, so a debug probe cannot be attached and
+# `defmt`'s RTT transport has nowhere to go. Panics halt in place instead of
+# being reported; use USB CDC or a UART on a spare GPIO if logging is needed.
+panic-halt = "0.2"
 # Pinned to 0.5 (not the newer 0.6) deliberately: 0.6 depends on
-# rp2040-hal 0.11, while rp-pico 0.9 depends on rp2040-hal 0.10.2. With
-# both in the dependency graph, fat LTO (see [profile.release] below)
-# fails to link with "symbol multiply defined" for compiler-builtins
-# globals. 0.5 depends on rp2040-hal ^0.10, so it unifies with rp-pico's
-# and the graph carries only one rp2040-hal version. Confined to
-# src/adapters/storage.rs only.
+# rp2040-hal 0.11, while the BSP depends on rp2040-hal 0.10.x. With both in
+# the dependency graph, fat LTO (see [profile.release] below) fails to link
+# with "symbol multiply defined" for compiler-builtins globals. 0.5 depends
+# on rp2040-hal ^0.10, so it unifies with the BSP's and the graph carries
+# only one rp2040-hal version. Confined to src/adapters/storage.rs only.
 rp2040-flash = "0.5"
+# WS2812B status LED on GP9, driven from PIO0 so the strict 800kHz timing
+# costs no CPU. Depend on `smart-leds-trait` (not the `smart-leds` umbrella
+# crate) and pin it to the 0.2 line ws2812-pio itself uses -- 0.3 defines an
+# incompatible `SmartLedsWrite`, so the trait would not match.
+ws2812-pio = "0.8"
+smart-leds-trait = "0.2"
 # Shares the single I2C0 peripheral between the tuner and display adapters
 # in main.rs's composition root (see `RefCellDevice` there). Its `atomic`
 # module (unused here -- we only use `RefCellDevice`, not `AtomicDevice`)

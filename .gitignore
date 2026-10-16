@@ -1,4 +1,8 @@
-firmware/radio-rp/build/
 .DS_Store
 target/
 *.uf2
+__pycache__/
+.claude/settings.local.json
+# ワークスペース直下は radio-core（ライブラリ）のみなので lock はコミットしない。
+# バイナリである firmware/rp2040 側の Cargo.lock は追跡する。
+/Cargo.lock
