@@ -16,8 +16,8 @@
 | OLED ディスプレイ | SSD1306 128×64 I²C | 1 | アドレス `0x3C`。**フロントパネル実装**、JST-XH 4 ピン |
 | ロータリーエンコーダ（天面ディスク／周波数操作用） | 秋月 [EC10E1220501](https://akizukidenshi.com/catalog/g/g115228/)（10型貫通軸、24 クリック / 12 パルス、push switch 無し） | 1 | A/C(コモン)/B の 3 端子。VCC 不要（内部プルアップ）。**フロントパネル実装**、JST-XH 3 ピン。貫通軸に天面ディスク（`hardware/models/Disc.stl`）を直接取り付ける。⚠️ **データシートの波形図は 1 クリック＝半サイクル（2 遷移）だが、実機では 1 クリックで 00→10→11→01→00 のフルサイクル（4 遷移）を出力する**ことを実測で確認済み。そのため `radio-core` の `COUNTS_PER_DETENT`（`radio-core/src/quadrature.rs`）は **4** |
 | タクトスイッチ | 秋月 [8MS8P1B05VS2QES](https://akizukidenshi.com/catalog/g/g104369/) 系（C 接点） | **2** | **① Action Button（機能ボタン）／② Reset Switch（筐体リセット）**。いずれも COM/NO の 2 端子のみ使用（NC は未使用、3 端子化のメリットは本機では無い）。**フロントパネル or ケース壁実装**、JST-XH 2 ピン×2 |
-| **ステータスLED** | **WS2812B-B（黒パッケージ、5050、フルカラーシリアル LED）** | 1 | **フロントパネル実装**、JST-XH 3 ピン（DIN/GND/VDD）。GPIO 1 本（PIO 駆動）で制御。**DIN 線に 330Ω の直列抵抗（R1）が必須**（下記「受動部品」参照）。将来リング状に増やす場合も DOUT を数珠つなぎすれば GPIO は 1 本のまま |
-| **スイッチ付き音量ポット** | **10kΩ Aカーブ 2 連ボリューム（スイッチ付き）＋ツマミ** | 1 | ⚠️ **現行の RK12L12C0A0E はスイッチ無しのため交換**。**フロントパネル実装**。ツマミは `hardware/models/VolumeNob.stl`。音声は JST-XH 6 ピン（ラジオモジュール基板へ）、スイッチは JST-XH 2 ピン（メイン基板へ）。**1 個のポットから 2 枚の基板へケーブルが伸びる**点に注意。スイッチはソフト電源 off（`main.rs` の `power_on`）に使う |
+| **ステータスLED** | **WS2812B-B（黒パッケージ、5050、フルカラーシリアル LED）** | 1 | **フロントパネル実装**、JST-XH 3 ピン（DIN/GND/VDD）。GPIO 1 本（PIO 駆動）で制御。**v1 では未接続・動作未確認**（`README.md` 参照）。**DIN 線に 330Ω の直列抵抗（R1）が必須**（下記「受動部品」参照）。将来リング状に増やす場合も DOUT を数珠つなぎすれば GPIO は 1 本のまま |
+| **スイッチ付き音量ポット** | **10kΩ Aカーブ 2 連ボリューム（スイッチ付き）＋ツマミ** | 1 | **フロントパネル実装**。ツマミは `hardware/models/VolumeNob.stl`。音声は JST-XH 6 ピン（ラジオモジュール基板へ）、スイッチは JST-XH 2 ピン（メイン基板へ）。**1 個のポットから 2 枚の基板へケーブルが伸びる**点に注意。スイッチはソフト電源 off（`main.rs` の `power_on`）に使う |
 | ステレオミニジャック | MJ-355W | 1 | ライン出力（アンプ経由なし）。**ケース壁面のパネルマウント**、JST-XH 3 ピン |
 | アクティブスピーカー | 任意（3.5mm ステレオ入力、アンプ内蔵） | 1 | 本機側にアンプ IC は無い |
 | USB ケーブル | **USB Type-C** | 1 | RP2040-Zero は Type-C 標準搭載（Pico の micro-USB から変更） |
@@ -54,10 +54,10 @@
 |---|---|---|
 | OLED | 4 | VCC / GND / SDA / SCL |
 | Rotary Encoder（天面ディスク） | 3 | GND / B / A |
-| Reset Swtich | 2 | GND / SW |
-| Action Button Swtich | 2 | SW / GND |
+| Reset Switch | 2 | GND / SW |
+| Action Button Switch | 2 | SW / GND |
 | LED | 3 | DIN / GND / VDD |
-| Switch Volume Pod | 2 | SW / GND |
+| Switch Volume Pot | 2 | SW / GND |
 | FM Radio Module（基板間） | 4 | GND / DATA / CLOCK / VDD |
 
 **ラジオモジュール基板側（4 個）**
@@ -65,8 +65,8 @@
 | コネクタ | ピン | 信号 |
 |---|---|---|
 | Controller（基板間） | 4 | VDD / CLOCK / DATA / GND |
-| Volume Pod I/O | 6 | LIN / RIN / GND / GND / LOUT / ROUT |
-| Sereo Jack | 3 | GND / LIN / RIN |
+| Volume Pot I/O | 6 | LIN / RIN / GND / GND / LOUT / ROUT |
+| Stereo Jack | 3 | GND / LIN / RIN |
 | ANT | 1 | ANT |
 
 ⚠️ **基板間の 4 ピンは電源と I²C のみ**。音声（LOUT/ROUT）はラジオモジュール基板内で完結してポットへ直行する。将来 RP2040 側へ音声を戻す（録音機能）場合は、**基板間ケーブルを最低 6 ピン増設**（入力 L/R/GND＋出力 L/R/GND）する必要がある。
@@ -121,7 +121,7 @@ RP2040-Zero のエッジピンは GPIO0〜15 / GPIO26〜29 の 20 本。**使用
 
 **RUN はどのパッド・ヘッダにも出ていない**（公式回路図で確認済み。P1=23 ピンは GPIO0〜15 / GPIO26〜29 / 3V3 / GND / VSYS、P2/P3=裏面パッドは GPIO17〜25 と GND）。
 
-オンボード RESET ボタン（Key2）は **RUN と GND の間に直結**されているだけなので、**このボタンの両端にリード線をはんだ付けして `Reset Swtich` の 2 ピンコネクタへ引く**。外付けボタンがオンボードボタンと並列になる。プルアップ抵抗は不要（RP2040 内部にある）。上記の 100nF は必ず入れること。
+オンボード RESET ボタン（Key2）は **RUN と GND の間に直結**されているだけなので、**このボタンの両端にリード線をはんだ付けして `Reset Switch` の 2 ピンコネクタへ引く**。外付けボタンがオンボードボタンと並列になる。プルアップ抵抗は不要（RP2040 内部にある）。上記の 100nF は必ず入れること。
 
 ## 🔋 電源方針
 
