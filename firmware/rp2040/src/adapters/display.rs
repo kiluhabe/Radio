@@ -1,9 +1,5 @@
 use core::fmt::Write;
-use embedded_graphics::mono_font::ascii::FONT_6X10;
-use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::text::Text;
 use embedded_hal::i2c::I2c;
 use heapless::String;
 use radio_core::Screen;
@@ -11,11 +7,16 @@ use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::prelude::*;
 use ssd1306::Ssd1306;
 
-use crate::adapters::vecfont;
+use crate::adapters::bitmap_font;
+use crate::adapters::font_data::{LABEL, NUMERAL};
 
-/// Height in px of the vector numeral glyph cell -- leaves headroom below
-/// for the "MHz" label within the 64px panel.
-const NUMERAL_HEIGHT: i32 = 44;
+/// Right edge of the numerals' advance box. Aligning on advances (all digits
+/// share one advance) rather than on ink keeps the string from shifting
+/// sideways as the last digit changes while tuning; the trailing '0' still
+/// ends its ink 2px inside the panel edge.
+const NUM_RIGHT: i32 = 128;
+const NUM_TOP: i32 = 2;
+const LABEL_BASELINE: i32 = 56;
 
 pub struct Ssd1306Display<I2C> {
     display: Ssd1306<
@@ -62,13 +63,15 @@ impl<I2C: I2c> radio_core::Display for Ssd1306Display<I2C> {
             // there is; a second digit would always read 0.
             let _ = write!(num, "{}.{}", freq / 100, (freq / 10) % 10);
 
-            let num_w = vecfont::measure_number(num.as_str(), NUMERAL_HEIGHT);
-            let x = 128 - 4 - num_w as i32;
-            vecfont::draw_number(&mut self.display, num.as_str(), Point::new(x, 2), NUMERAL_HEIGHT);
+            let ink_l = NUMERAL.ink_left(num.as_str());
+            let x = NUM_RIGHT - NUMERAL.advance_width(num.as_str());
+            let origin = Point::new(x, NUM_TOP + NUMERAL.ascent);
+            bitmap_font::draw(&mut self.display, &NUMERAL, num.as_str(), origin);
 
-            let mhz_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
-            let _ = Text::new("MHz", Point::new(x, NUMERAL_HEIGHT + 12), mhz_style)
-                .draw(&mut self.display);
+            // Label's left ink edge sits 1px right of the numerals' left ink edge.
+            let lab_l = LABEL.ink_left("MHz");
+            let lab_origin = Point::new(x + ink_l + 1 - lab_l, LABEL_BASELINE);
+            bitmap_font::draw(&mut self.display, &LABEL, "MHz", lab_origin);
         }
 
         let _ = self.display.flush();

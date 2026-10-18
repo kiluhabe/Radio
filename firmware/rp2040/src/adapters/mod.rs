@@ -5,4 +5,5 @@ pub mod led;
 pub mod tuner;
 pub mod display;
 pub mod storage;
-pub mod vecfont;
+pub mod bitmap_font;
+pub mod font_data;
