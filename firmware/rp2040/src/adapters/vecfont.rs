@@ -5,7 +5,7 @@
 //! them at any size. Each digit here is instead a small set of 1px `Line`
 //! segments traced along a classic seven-segment layout's centerlines,
 //! which is what a genuinely thin digital numeral looks like at this scale
-//! (~10 line segments per glyph, per the design brief this is ported from).
+//! (~10 line segments per glyph).
 
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle};

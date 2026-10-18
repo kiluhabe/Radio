@@ -8,7 +8,6 @@ const RDA5807_I2C_ADDRESS: u8 = 0x11;
 const REG_CONFIG: u8 = 0x02;
 const REG_TUNING: u8 = 0x03;
 const REG_VOLUME: u8 = 0x05;
-const REG_RSSI: u8 = 0x0B;
 
 // REG02 (config) bits actually used here. Names/values per the RDA5807
 // datasheet (see also rda5807m::register_address::ConfigBitFlags, which
@@ -44,38 +43,25 @@ const VOLUME_MASK: u16 = 0b1111;
 
 /// REG05 baseline for the non-volume fields (LNA port select, seek
 /// threshold). Values taken directly from the hardware-verified PU2CLR
-/// Arduino library's `powerUp()` (`LNA_PORT_SEL=2` i.e. LNAP single-ended
+/// RDA5807 library's `powerUp()` (`LNA_PORT_SEL=2` i.e. LNAP single-ended
 /// input, `SEEKTH=8`), since nothing in this codebase's own power-up
 /// sequence establishes a baseline for this register otherwise.
 /// `set_volume()` ORs the requested volume into this fixed baseline.
 const VOLUME_BASELINE_NO_VOLUME_BITS: u16 = (2 << LNA_PORT_SEL_SHIFT) | (8 << SEEK_TH_SHIFT);
-
-// REG0B (RSSI status) bits.
-const RSSI_MASK: u16 = 0b1111_1110_0000_0000;
-const RSSI_SHIFT: u8 = 9;
 
 /// Minimal, self-contained RDA5807 register driver.
 ///
 /// This does not wrap the `rda5807m` crate. That crate's `set_frequency`/
 /// `mute`/`set_volume` are read-modify-write: each reads its target
 /// register (REG03/REG02/REG05) back over I2C before merging in the new
-/// bits (`get_band_and_spacing()`/`update_register()` in rda5807m's
-/// `lib.rs`). On this hardware (M5807PA, an RDA5807P-compatible clone) that
+/// bits. On this hardware (M5807PA, an RDA5807P-compatible clone) that
 /// readback does not reflect what was actually written, which silently
-/// corrupted every field outside the one being changed -- observed as the
-/// RSSI meter responding correctly to tuning (REG0B, a genuine read-back
-/// status register, is unaffected) while the demodulated station never
-/// changed (REG03's CHAN bits were corrupted on every write). Confirmed to
-/// be a firmware-side regression, not a hardware fault: the same physical
-/// board tuned correctly under the prior Arduino firmware (via the PU2CLR
-/// RDA5807 library), which -- for exactly its tuning/config registers -- never reads
-/// REG02/REG03/REG05 back either; it keeps its own in-RAM shadow of each
-/// register and writes the whole thing on every change. This driver
-/// follows that same proven pattern directly: every register write here is
-/// a complete, known-good value computed from a fixed baseline plus the
-/// one field being changed, with no register read anywhere in the write
-/// path. `rssi()` is the only read, and REG0B is a true status register
-/// (0x0A-0x0F range) unaffected by this issue.
+/// corrupted every field outside the one being changed (e.g. REG03's CHAN
+/// bits, so the station never changed). The write-only registers cannot be
+/// trusted to read back, so every register write here is a complete,
+/// known-good value computed from a fixed baseline plus the one field being
+/// changed (the same in-RAM-shadow pattern the PU2CLR RDA5807 library uses),
+/// with no register read anywhere.
 ///
 /// Keeping this self-contained inside the one file that implements
 /// `radio_core::Tuner` (rather than patching around a third-party crate's
@@ -99,14 +85,6 @@ impl<I2C: I2c> Rda5807Tuner<I2C> {
             RDA5807_I2C_ADDRESS,
             &[register, (value >> 8) as u8, (value & 0xFF) as u8],
         );
-    }
-
-    fn read_register(&mut self, register: u8) -> u16 {
-        let mut buf = [0u8; 2];
-        let _ = self
-            .i2c
-            .write_read(RDA5807_I2C_ADDRESS, &[register], &mut buf);
-        ((buf[0] as u16) << 8) | buf[1] as u16
     }
 }
 
@@ -146,10 +124,5 @@ impl<I2C: I2c> radio_core::Tuner for Rda5807Tuner<I2C> {
     fn set_volume(&mut self, vol: u8) {
         let vol = (vol as u16) & VOLUME_MASK;
         self.write_register(REG_VOLUME, VOLUME_BASELINE_NO_VOLUME_BITS | vol);
-    }
-
-    fn rssi(&mut self) -> u8 {
-        let reg = self.read_register(REG_RSSI);
-        ((reg & RSSI_MASK) >> RSSI_SHIFT) as u8
     }
 }

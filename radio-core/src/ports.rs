@@ -4,13 +4,11 @@ use crate::types::Settings;
 pub enum Screen {
     Tune {
         freq: u16,
-        rssi: u8,
     },
     Fav {
         index: usize,
         count: usize,
         freq: Option<u16>,
-        rssi: u8,
     },
 }
 
@@ -20,7 +18,6 @@ pub trait Tuner {
     fn set_frequency(&mut self, khz_x100: u16);
     fn set_mute(&mut self, mute: bool);
     fn set_volume(&mut self, vol: u8);
-    fn rssi(&mut self) -> u8;
 }
 
 pub trait Display {

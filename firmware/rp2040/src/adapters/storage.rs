@@ -1,7 +1,6 @@
 //! Flash-backed `Storage` adapter (MVP).
 //!
-//! Same approach as the Arduino version's `EEPROM.put`/`EEPROM.get`: a flat,
-//! magic-number-validated struct written raw to a dedicated flash region.
+//! A flat, magic-number-validated struct written raw to a dedicated flash region.
 //! Not wear-leveled -- that's explicitly out of scope for this MVP.
 //!
 //! RP2040 flash can only be erased in 4KB sectors, so `memory.x` reserves the
@@ -97,20 +96,13 @@ impl radio_core::Storage for FlashStorage {
         if stored.fav_count as usize > MAX_FAVS {
             return None;
         }
-        // Matches loadSettings()'s `if (s.freq >= FREQ_MIN && s.freq <=
-        // FREQ_MAX) currentFreq = s.freq;`: an out-of-range stored
-        // frequency is rejected. Unlike Arduino (which just keeps
-        // currentFreq at its prior value and continues loading favs), the
-        // simplest faithful equivalent here is to reject the whole load and
-        // let the caller fall back to `Settings::default()`.
+        // An out-of-range stored frequency rejects the whole load; the caller
+        // falls back to `Settings::default()`.
         if stored.freq < FREQ_MIN || stored.freq > FREQ_MAX {
             return None;
         }
-        // Matches loadSettings()'s favorites-validation loop: it `return`s
-        // out of the whole function on the first out-of-range favorite,
-        // discarding the entire settings blob rather than just that one
-        // favorite. Validate all favorites up front before building
-        // `settings` so a single bad entry rejects everything.
+        // A single out-of-range favorite rejects the entire settings blob.
+        // Validate all favorites up front, before building `settings`.
         for i in 0..stored.fav_count as usize {
             if stored.favs[i] < FREQ_MIN || stored.favs[i] > FREQ_MAX {
                 return None;

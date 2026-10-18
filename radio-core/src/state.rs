@@ -120,17 +120,15 @@ impl RadioState {
         self.dirty = false;
     }
 
-    pub fn current_screen(&self, rssi: u8) -> Screen {
+    pub fn current_screen(&self) -> Screen {
         match self.mode {
             Mode::Tune => Screen::Tune {
                 freq: self.settings.freq,
-                rssi,
             },
             Mode::Fav => Screen::Fav {
                 index: self.fav_index,
                 count: self.settings.favs.len(),
                 freq: self.settings.favs.get(self.fav_index).copied(),
-                rssi,
             },
         }
     }
@@ -225,10 +223,9 @@ mod tests {
     fn current_screen_reflects_tune_mode() {
         let mut rs = RadioState::new(Settings::default());
         rs.settings.freq = 9010;
-        match rs.current_screen(42) {
-            Screen::Tune { freq, rssi } => {
+        match rs.current_screen() {
+            Screen::Tune { freq } => {
                 assert_eq!(freq, 9010);
-                assert_eq!(rssi, 42);
             }
             _ => panic!("expected Screen::Tune"),
         }
@@ -238,7 +235,7 @@ mod tests {
     fn current_screen_reflects_fav_mode_with_empty_favs() {
         let mut rs = RadioState::new(Settings::default());
         rs.mode = Mode::Fav;
-        match rs.current_screen(0) {
+        match rs.current_screen() {
             Screen::Fav { index, count, freq, .. } => {
                 assert_eq!(index, 0);
                 assert_eq!(count, 0);

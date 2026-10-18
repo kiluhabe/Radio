@@ -42,16 +42,12 @@ impl<I2C: I2c> radio_core::Display for Ssd1306Display<I2C> {
 
     /// Mode-less minimal screen: the frequency is the only thing drawn (TUNE
     /// and FAV render identically -- there is deliberately no mode tag or
-    /// favourite index, see the design brief this implements).
+    /// favourite index).
     ///
-    /// The signal-strength "degradation" effect (noise dots, tear bands,
-    /// numeral flicker) has been removed. It required redrawing on a timer
-    /// rather than only on state change, and every redraw pushes the whole
-    /// 1024-byte framebuffer over an I2C bus that has no pull-up resistors
-    /// fitted -- suspected of starving the main loop's input polling and of
-    /// coupling into the analog audio path. Signal strength is currently not
-    /// displayed at all; reintroduce it only via something that does not need
-    /// a free-running redraw.
+    /// Callers must redraw only on state change, never on a timer: each
+    /// redraw pushes the whole 1024-byte framebuffer over an I2C bus that has
+    /// no pull-up resistors fitted, which is suspected of starving input polling
+    /// and of coupling into the analog audio path.
     fn render(&mut self, screen: &Screen) {
         self.display.clear_buffer();
 

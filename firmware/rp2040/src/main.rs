@@ -46,13 +46,53 @@ fn busy_wait_ms(clock: &adapters::clock::HalClock, ms: u32) {
     while clock.now_ms().wrapping_sub(start) < ms {}
 }
 
-/// Reads RSSI and redraws the screen. Called only at the points that actually
-/// change what is displayed, so idle RSSI-only drift doesn't spuriously redraw -- a redraw
-/// pushes the whole framebuffer over I2C and blocks the loop's input polling
-/// while it does.
-fn redraw<T: Tuner, D: Display>(radio: &RadioState, tuner: &mut T, display: &mut D) {
-    let rssi = tuner.rssi();
-    display.render(&radio.current_screen(rssi));
+/// Redraws the screen. Called only at the points that actually change what is
+/// displayed -- a redraw pushes the whole framebuffer over I2C and blocks the
+/// loop's input polling while it does.
+fn redraw<D: Display>(radio: &RadioState, display: &mut D) {
+    display.render(&radio.current_screen());
+}
+
+/// Commits settings to flash once they have been dirty for `delay_ms`
+/// (0 forces a save of any pending change).
+fn save_if_due<S: Storage>(radio: &mut RadioState, storage: &mut S, now: u32, delay_ms: u32) {
+    if radio.should_save(now, delay_ms) {
+        storage.save(&radio.settings);
+        radio.clear_dirty();
+    }
+}
+
+/// Restores the display, powers up and reconfigures the tuner, retunes,
+/// unmutes and redraws.
+fn power_up<T: Tuner, D: Display>(
+    radio: &RadioState,
+    tuner: &mut T,
+    display: &mut D,
+    clock: &adapters::clock::HalClock,
+) {
+    display.power_save(false);
+    tuner.power_up();
+    tuner.set_mute(true);
+    tuner.set_frequency(radio.settings.freq);
+    busy_wait_ms(clock, 50);
+    tuner.set_volume(FIXED_VOL);
+    tuner.set_mute(false);
+    redraw(radio, display);
+}
+
+/// Force-saves if dirty (regardless of the settle delay), then mutes and
+/// powers down the tuner and blanks the display.
+fn power_down<T: Tuner, D: Display, S: Storage>(
+    radio: &mut RadioState,
+    tuner: &mut T,
+    display: &mut D,
+    storage: &mut S,
+    now: u32,
+) {
+    save_if_due(radio, storage, now, 0);
+    tuner.set_mute(true);
+    tuner.power_down();
+    display.power_save(true);
 }
 
 #[entry]
@@ -160,18 +200,9 @@ fn main() -> ! {
 
         if sw_on != power_on {
             if sw_on {
-                // Mirrors radioPowerOn(): restore display, power up +
-                // reconfigure the tuner, retune, unmute, redraw, and resync
-                // the disc so anything that moved while off isn't applied as
-                // a jump after power-on.
-                display.power_save(false);
-                tuner.power_up();
-                tuner.set_mute(true);
-                tuner.set_frequency(radio.settings.freq);
-                busy_wait_ms(&clock, 50);
-                tuner.set_volume(FIXED_VOL);
-                tuner.set_mute(false);
-                redraw(&radio, &mut tuner, &mut display);
+                power_up(&radio, &mut tuner, &mut display, &clock);
+                // Resync the disc so anything that moved while off isn't
+                // applied as a jump after power-on.
                 last_disc_pos = disc.position();
                 // The debouncer is not polled while powered off, so its
                 // timestamps go stale. Without this reset, a press left
@@ -180,16 +211,7 @@ fn main() -> ! {
                 // very next poll after power-on.
                 debouncer = ButtonDebouncer::new();
             } else {
-                // Mirrors radioPowerOff(): force-save if dirty (regardless of
-                // the settle delay), mute + power down the tuner, blank the
-                // display and the status LED.
-                if radio.should_save(now, 0) {
-                    storage.save(&radio.settings);
-                    radio.clear_dirty();
-                }
-                tuner.set_mute(true);
-                tuner.power_down();
-                display.power_save(true);
+                power_down(&mut radio, &mut tuner, &mut display, &mut storage, now);
                 led.set(adapters::led::OFF);
             }
             power_on = sw_on;
@@ -204,7 +226,7 @@ fn main() -> ! {
             ButtonEvent::Short => {
                 radio.cycle_mode();
                 tuner.set_frequency(radio.settings.freq);
-                redraw(&radio, &mut tuner, &mut display);
+                redraw(&radio, &mut display);
             }
             ButtonEvent::Double => {
                 match radio.mode {
@@ -213,13 +235,13 @@ fn main() -> ! {
                     }
                     Mode::Fav => {
                         radio.delete_selected_fav(now);
-                        // delete_selected_fav() retunes the hardware itself
-                        // when favorites remain; pushing here unconditionally
-                        // is a harmless no-op when the list emptied out.
+                        // radio-core only updates settings.freq; push it to
+                        // the tuner here. When the list emptied out freq is
+                        // unchanged, so this is a harmless re-tune.
                         tuner.set_frequency(radio.settings.freq);
                     }
                 }
-                redraw(&radio, &mut tuner, &mut display);
+                redraw(&radio, &mut display);
             }
             // Long press is deliberately unassigned now that the pot switch
             // owns power on/off.
@@ -228,7 +250,7 @@ fn main() -> ! {
 
         // Disc: tunes in TUNE mode, moves the favourite selection in FAV
         // mode. Frozen while the action button is held so a double-press
-        // doesn't nudge the frequency, matching the Arduino sketch's freeze.
+        // doesn't nudge the frequency.
         // Also frozen in FAV mode with 0 or 1 favourites: there is nothing
         // to select between, so any spurious movement would otherwise still
         // trigger a real (audible) retune + redraw for no visible effect.
@@ -242,7 +264,7 @@ fn main() -> ! {
             last_disc_pos = disc_pos;
             radio.apply_encoder_delta(delta, now);
             tuner.set_frequency(radio.settings.freq);
-            redraw(&radio, &mut tuner, &mut display);
+            redraw(&radio, &mut display);
         }
 
         led.set(match radio.mode {
@@ -250,9 +272,6 @@ fn main() -> ! {
             Mode::Fav => adapters::led::FAV,
         });
 
-        if radio.should_save(now, SAVE_DELAY_MS) {
-            storage.save(&radio.settings);
-            radio.clear_dirty();
-        }
+        save_if_due(&mut radio, &mut storage, now, SAVE_DELAY_MS);
     }
 }

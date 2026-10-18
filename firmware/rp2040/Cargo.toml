@@ -40,7 +40,7 @@ rp2040-flash = "0.5"
 # incompatible `SmartLedsWrite`, so the trait would not match.
 ws2812-pio = "0.8"
 smart-leds-trait = "0.2"
-# Shares the single I2C0 peripheral between the tuner and display adapters
+# Shares the single I2C1 peripheral between the tuner and display adapters
 # in main.rs's composition root (see `RefCellDevice` there). Its `atomic`
 # module (unused here -- we only use `RefCellDevice`, not `AtomicDevice`)
 # still gets compiled and pulls in `portable-atomic`'s CAS-based fallback,
