@@ -1,10 +1,4 @@
-# 📻 Minimal Desktop FM Radio (RP2040-Zero 版)
-
-Waveshare RP2040-Zero + RDA5807/M5807PA チューナーで作る、最小構成のデスクトップFMラジオ。物理ノブ（ロータリーエンコーダ＋タクトスイッチ＋スイッチ付き音量ポット）だけで操作する専用機。ファームウェアは Rust (`no_std`)。
-
-- 日本のFM帯（76〜108MHz）を受信
-- 周波数・お気に入りを電源off後も保持
-- ロータリーエンコーダ＋タクトスイッチ＋物理ボリュームでの操作
+# 📻 Simple FM Radio
 
 ## 📍 Status
 
@@ -13,17 +7,6 @@ Waveshare RP2040-Zero + RDA5807/M5807PA チューナーで作る、最小構成�
 - モード切替：短押しで `TUNE ⇔ FAV`（FAV は画面を白黒反転）
 - 電源on/off：**音量ポット内蔵スイッチ**
 - お気に入り：16スロット、ダブルプレスで追加/削除
-
-## 🧱 構成
-
-`radio-core`（ハードウェア非依存のロジック、`no_std`）と `firmware/rp2040`（アダプタ＋合成ルート）に分離したポート＆アダプタ構成。
-
-## 📚 Docs
-
-- [docs/parts-rp.md](docs/parts-rp.md) — 部品リスト
-- `hardware/diylc/radio-rpv2.diy` — 配線・ピン割り当ての正本（[DIYLC](https://github.com/bancika/diy-layout-creator) で開く）
-- `hardware/models/*.stl` — ケース・ノブ・ディスク
-- [ROADMAP.md](ROADMAP.md) — 今後の検討メモ
 
 ## 🔨 Build & Flash
 
