@@ -41,9 +41,10 @@ impl<I2C: I2c> radio_core::Display for Ssd1306Display<I2C> {
         let _ = self.display.set_display_on(!save);
     }
 
-    /// Mode-less minimal screen: the frequency is the only thing drawn (TUNE
-    /// and FAV render identically -- there is deliberately no mode tag or
-    /// favourite index).
+    /// Minimal screen: the frequency is the only thing drawn, and the mode is
+    /// shown solely by inverting the panel in FAV (no mode tag or favourite
+    /// index). Inversion is the controller's own 0xA6/0xA7 command, so it
+    /// costs one command byte rather than a different framebuffer.
     ///
     /// Callers must redraw only on state change, never on a timer: each
     /// redraw pushes the whole 1024-byte framebuffer over an I2C bus that has
@@ -52,10 +53,11 @@ impl<I2C: I2c> radio_core::Display for Ssd1306Display<I2C> {
     fn render(&mut self, screen: &Screen) {
         self.display.clear_buffer();
 
-        let freq = match *screen {
-            Screen::Tune { freq, .. } => Some(freq),
-            Screen::Fav { freq, .. } => freq,
+        let (freq, invert) = match *screen {
+            Screen::Tune { freq, .. } => (Some(freq), false),
+            Screen::Fav { freq, .. } => (freq, true),
         };
+        let _ = self.display.set_invert(invert);
 
         if let Some(freq) = freq {
             let mut num: String<8> = String::new();
